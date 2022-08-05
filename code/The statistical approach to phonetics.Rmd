@@ -1,0 +1,628 @@
+---
+title: "The Statistical Approach to Phonetics"
+output: html_notebook
+---
+Main tasks: 
+
+1. Integrate the three data files and extract the variables required for the research.
+
+2. Integrate the data extracted in the first step into a data file, make descriptive statistics, and generate a table and boxplots.
+
+3. Infer and count the data, judge whether there are significant differences in the data results produced by different speaking attitudes, and visualize the results; Judge whether the data can predict the specific speech and the prediction accuracy.
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Clear all historical variables.
+```{r}
+rm(list=ls())
+```
+
+#Import the R package required for subsequent work.
+```{r}
+library(tidyverse);library(emmeans);library(effects)
+library(lme4);library(lmerTest);library(do)
+library(splitstackshape)
+```
+
+#Set file access path
+```{r warning=FALSE}
+setwd("/Users/zhulei/Desktop/R学习/R大作业")
+```
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#DATA PREPARATION
+
+#Import file "Deferential_F0_Dur.csv" and assign the data in the data file to the variable DFD.
+```{r}
+DFD <- read.csv("Deferential_F0_Dur.csv", fileEncoding = 'GBK')
+DFD
+```
+
+#Add a new column FileName1 in the DFD table, and assign the value of FileName to this new column.
+
+#Change the data name in the new column, and add "_" after F and M respectively.
+```{r}
+DFD$FileName1 <- DFD$FileName
+DFD$FileName1 <- Replace(DFD$FileName1, from="F",to="F_")
+DFD$FileName1 <- Replace(DFD$FileName1, from="M",to="M_")
+DFD
+```
+
+#Based on "_" to split FileName1 into four new columns.
+
+#Then we can see column names of table DFD.
+```{r}
+DFD <- cSplit(DFD, "FileName1","_")
+names(DFD)
+```
+
+#Change the column names of columns 33-36 in the DFD table to "gender", "speaker", "item", "attitude".
+
+#Merge the data of the gender column and the speaker column to form a new speaker column.
+```{r}
+colnames(DFD)[33:36]=c("gender","speaker","item","attitude")
+DFD$speaker <- str_c(DFD$gender,DFD$speaker)
+DFD
+```
+
+#Remove "NA" in DFD table to avoid impact on subsequent statistical analysis.
+```{r}
+DFD <- DFD[complete.cases(DFD),]
+DFD
+```
+
+#Group the data by "gender", "attitude", "speaker" and "item" to calculate the fundamental frequency, speaking speed, breathiness and sampling times.
+
+#summarise( ) creates a new data frame. It will have one (or more) rows for each combination of grouping variables; if there are no grouping variables, the output will have a single row summarising all observations in the input. It will contain one column for each grouping variable and one column for each of the summary statistics that you have specified.
+```{r}
+DFD_new <- DFD %>% group_by(gender,attitude,speaker,item) %>%
+            summarize(meanf0=mean(SylMeanPitch),
+            articulationRate=n()/sum(SylDuration),
+            f0Span=0.95*max(SylMaxPitch)-1.05*min(SylMinPitch),
+            N=n())
+DFD_new
+```
+
+#Import file "Deferential_Intensity_Dur.csv" and assign the data in the data file to the variable DID.
+```{r}
+DID <- read.csv("Deferential_Intensity_Dur.csv")
+DID
+```
+
+#Add a new column fileName2 in the DID table, and assign the value of fileName to this new column.
+
+#Change the data name in the new column, and add "_" after F and M respectively.
+```{r}
+DID$fileName2 <- DID$fileName
+DID$fileName2 <- Replace(DID$fileName2, from="F",to="F_")
+DID$fileName2 <- Replace(DID$fileName2, from="M",to="M_")
+DID
+```
+
+#Based on "_" to split fileName2 into four new columns.
+
+#Then we can see column names of table DID.
+```{r}
+DID <- cSplit(DID, "fileName2","_")
+names(DID)
+```
+
+#Change the column names of columns 15-18 in the DID table to "gender", "speaker", "item", "attitude".
+#Merge the data of the gender column and the speaker column to form a new speaker column.
+```{r}
+colnames(DID)[15:18]=c("gender","speaker","item","attitude")
+DID$speaker <- str_c(DID$gender,DID$speaker)
+DID
+```
+
+#Filter out the unique data that appears in the "name" column of DID.
+```{r}
+unique(DID$name)
+```
+
+#Extract data containing vowels from the "name" column of DID and assign the filtered rows to DID.
+```{r}
+DID <- filter(DID, name %in% 
+                c("dan4","shi","wo","shen1","ti3",
+                    "bu","tai","shu1","fu2","tu2",
+                    "guan3","li","hao3","xiang4","mei2",
+                    "you","zhei4","ben3","shu","zhe4","xian4",
+                    "zai4","dian3","ji2","shi4","jin1",
+                    "tian1","bi4","xu1","gei3","ta1","da","dian4",
+                  "hua4","zhu4","yi4","dao","ge","tong1","zhi1","dao4",
+                    "hui4","di4","ming2","bai","ji1","zhong1","de",
+                  "yuan2","li3","zhao3","le","hen3","jiu3","dou1",
+                    "zen3","me","yong4","you3","tin,g1","qing1","chu",
+                  "shou1","na","feng","you2","jian4","qi","di1","nei4",
+                    "wang3","zhan4","fou3","ne2","zong","ji3","mo4","du1"))
+DID
+```
+
+#Convert the data of "meanIntensity" column in DID into numerical data to prepare for calculation in "summarize".
+```{r}
+DID$meanIntensity <- as.numeric(DID$meanIntensity) 
+DID
+```
+
+#Group the data by "gender", "attitude", "speaker" and "item" to calculate the mean intensity and sampling times.
+```{r}
+DID_new <- DID %>% group_by(gender,attitude,speaker,item) %>% 
+  summarise(meanIntensity=mean(meanIntensity),N=n())
+DID_new
+```
+
+
+#Import file "Deferential_voiceQuality.csv" and assign the data in the data file to the variable DVQ.
+```{r}
+DVQ <- read.csv("Deferential_voiceQuality.csv")
+DVQ
+```
+
+#Add a new column Filename3 in the DVQ table, and assign the value of Filename to this new column.
+
+#Change the data name in the new column, and add "_" after F and M respectively.
+```{r}
+DVQ$Filename3 <- DVQ$Filename
+DVQ$Filename3 <- Replace(DVQ$Filename3, from="F",to="F_")
+DVQ$Filename3 <- Replace(DVQ$Filename3, from="M",to="M_")
+DVQ
+```
+
+#Based on "_" to split Filename3 into four new columns.
+
+#Then we can see column names of table DVQ.
+```{r}
+DVQ <- cSplit(DVQ, "Filename3","_")
+names(DVQ)
+```
+
+#Change the column names of columns 17-20 in the DVQ table to "gender", "speaker", "item", "attitude".
+
+#Merge the data of the gender column and the speaker column to form a new speaker column.
+```{r}
+colnames(DVQ)[17:20]=c("gender","speaker","item","attitude")
+DVQ$speaker <- str_c(DVQ$gender,DVQ$speaker)
+DVQ
+```
+
+#Filter out the unique data that appears in the "Segment.label" column of DVQ.
+```{r}
+unique(DVQ$Segment.label)
+```
+
+#Extract data containing vowels from the "Segment.label" column of DVQ and assign the filtered rows to DVQ.
+```{r}
+DID <- filter(DID, name %in% 
+                c("dan4","shi","wo","shen1","ti3",
+                    "bu","tai","shu1","fu2","tu2",
+                    "guan3","li","hao3","xiang4","mei2",
+                    "you","zhei4","ben3","shu","zhe4","xian4",
+                    "zai4","dian3","ji2","shi4","jin1",
+                    "tian1","bi4","xu1","gei3","ta1","da","dian4",
+                  "hua4","zhu4","yi4","dao","ge","tong1","zhi1","dao4",
+                    "hui4","di4","ming2","bai","ji1","zhong1","de",
+                  "yuan2","li3","zhao3","le","hen3","jiu3","dou1",
+                    "zen3","me","yong4","you3","tin,g1","qing1","chu",
+                  "shou1","na","feng","you2","jian4","qi","di1","nei4",
+                    "wang3","zhan4","fou3","ne2","zong","ji3","mo4","du1"))
+DVQ
+```
+
+#Group the data by "gender", "attitude", "speaker" and "item" to calculate the first and second harmonic difference (H1-H2) and sampling times.
+```{r}
+DVQ_new <- DVQ %>% group_by(gender,attitude,speaker,item) %>% 
+                    summarise(H1_H2=mean(H1.H2.1),N=n())
+DVQ_new
+```
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#DATA MERGING
+
+#Combine speaker column, item column and attribute column into a new ID column in three tables (DFD_new, DID_new, DVQ_new)
+```{r}
+DFD_new$ID <- paste0(DFD_new$speaker,"_",DFD_new$item,"_",DFD_new$attitude)
+DVQ_new$ID <- paste0(DVQ_new$speaker,"_",DVQ_new$item,"_",DVQ_new$attitude)
+DID_new$ID <- paste0(DID_new$speaker,"_",DID_new$item,"_",DID_new$attitude)
+names(DFD_new);names(DVQ_new);names(DID_new)
+```
+
+#With the same ID column, join  DFD_ new and VQ_ New to form a new table demo1; Then follow the same steps to join demo2 and DID_new to form a new table demo2.
+```{r}
+demo1 <- merge(DFD_new,DVQ_new,by="ID")
+demo2 <- merge(demo1, DID_new, by="ID")
+demo2
+```
+
+#By observing demo2, we find that there are duplicate columns. We use the "names( )" function to obtain the column name and number in demo2 and delete the duplicate columns.
+```{r}
+view(demo2)
+names(demo2)
+demo2 <- demo2[,-c(10:13,16:19)]
+```
+
+#Then, by observing the current demo2 column name, modify some column names to the variable names we need for our research.
+
+#Store the modified demo2 table in the data file "demo2.csv".
+```{r}
+names(demo2)
+colnames(demo2)[c(2:5)]=c("gender","attitude","speaker","item")
+demo2
+write.csv(demo2,"demo2.csv")
+```
+
+#Read the previously stored "demo2.csv" file and assign the read value to the variable demo2.
+```{r}
+demo2 <- read.csv("demo2.csv")
+demo2
+```
+
+#Select the column containing meanf0 in demo2.
+```{r}
+names(demo2)
+demo3 <- demo2[,c(2:7)]
+demo3
+```
+
+#Separate Def and Non in demo3, extract the value of meanf0 and the name of attribute, and store the data in demo3_wide.
+
+#pivot_wider( ) "widens" data, increasing the number of columns and decreasing the number of rows. 
+```{r}
+demo3 <- Replace(demo3,from="_Def", to="")
+demo3 <- Replace(demo3,from="_Non", to="")
+demo3
+demo3_wide <- demo3 %>% pivot_wider(values_from = meanf0,names_from = attitude)
+demo3_wide
+```
+
+#Convert "Def" and "Non" in demo3_wide to numeric variables, and add a new "f0difference" column to the table through the "mutate" function, whose value is the difference between "Def" and "Non".Assign the above results to the new variable demo3_ diff.
+```{r}
+str(demo3_wide)
+demo3_wide$Def <- as.numeric(demo3_wide$Def)
+demo3_wide$Non <- as.numeric(demo3_wide$Non)
+demo3_diff <- mutate(demo3_wide,f0difference=Def-Non)
+demo3_diff
+```
+
+#Set significant digits.
+```{r}
+options(digits = 1)
+```
+
+#By observing demo3 and demo_diff column names, we found that they do not have the same column. Therefore, we need to merge speaker and item in demo3 to form a new column —— speaker_item. Then we use the same speaker_item to merge demo3 and demo3_diff and assigned the data to demo4.
+```{r}
+names(demo3)
+names(demo3_diff)
+demo3$speaker_item <- paste0(demo3$speaker, "_", demo3$item)
+demo3_diff$speaker_item <- paste0(demo3_diff$speaker,"_",demo3_diff$item)
+demo4 <- merge(demo3,demo3_diff, by = "speaker_item")
+demo4
+```
+
+#By observing the column names of demo4, we delete the invalid columns and modify some column names in demo4.
+```{r}
+names(demo4)
+demo4 <- demo4[,-c(8:13)]
+colnames(demo4)[c(2,3,5,6)]=c("ID","gender","speaker","item")
+names(demo4)
+```
+
+#In order to facilitate grouping research, we introduce a new variable f0change, which is divided into three categories according to the f0difference value relative to 5 and -5.
+```{r}
+demo4 <- mutate(demo4, f0Change=ifelse(f0difference> 5,"f0Higher",
+                                ifelse(f0difference< -5,"f0Lower",
+                                ifelse(f0difference<= 5 & f0difference>= -5, 
+                                       "f0Similar",""))))
+demo4
+```
+
+#Similar to the previous steps, we add an "ID" variable in demo4 to connect demo4 with demo2 and ensure the uniqueness of a row of data.
+```{r}
+names(demo4)
+names(demo2)
+demo4$ID <- paste0(demo4$ID,"_",demo4$attitude)
+demo5 <- merge(demo4,demo2, by = "ID")
+```
+
+#By observing the data in demo5, we deleted the irrelevant columns and changed the column name to the variable name required for the research.
+```{r}
+demo5
+names(demo5)
+demo5 <- demo5[,-c(1:2,10:15)]
+colnames(demo5)[1:5]=c("gender","attitude","speaker","item","meanf0")
+```
+
+#Assign demo5 to research_ Data and write it to the data file "research_data.csv".
+```{r}
+research_data <- demo5
+view(research_data)
+write.csv(research_data,"research_data.csv")
+```
+
+#So far, the data preparation has been completed, and we move on to the next step.
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#STATISTICAL ANALYSIS
+
+#Load data
+```{r}
+RD <- read.csv("research_data.csv")
+RD
+```
+
+#Group the data in RD by "gender" and "attitude" to calculate the "M"(mean), "SD"(standard derivation) and "N"(sampling times) of "f0", "f0Span", "meanIntensity", "articulationRate", "H1_H2". Assign the calculated data to DST (descriptive statistics table).
+```{r}
+DST <- RD %>% group_by(gender,attitude) %>% 
+              summarise(M_f0=mean(meanf0),
+                        SD_f0=sd(meanf0), 
+                        N_f0=n(),
+                        M_f0Span=mean(f0Span),
+                        SD_f0Span=sd(f0Span), 
+                        N_f0Span=n(),
+                        M_Intensity=mean(meanIntensity),
+                        SD_Intensity=sd(meanIntensity), 
+                        N_Intensity=n(),
+                        M_articulationRate=mean(articulationRate),
+                        SD_articulationRate=sd(articulationRate), 
+                        N_articulationRate=n(),
+                        M_H1_H2=mean(H1_H2),
+                        SD_H1_H2=sd(H1_H2),
+                        N_H1_H2=n())
+DST
+```
+#Boxplot
+
+#F0 in different attitudes.
+
+library(devEMF)
+emf("A_meanf0_boxplot.emf", width=5.5, height=3)
+```{r}
+plot_f0 <- boxplot(meanf0~attitude+gender, RD,
+            col=c("coral1","deepskyblue"),
+            notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+            xlab="Attitude", ylab="Average F0 (Hz)",
+            main="Avarage F0 of Deferential and Neutral Mandarin Speech")
+```
+dev.off
+
+#F0Span in different attitudes.
+
+emf("A_f0Span_boxplot.emf", width=5.5, height=3)
+```{r}
+plot_span <- boxplot(f0Span~attitude+gender, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average Span (st)",
+        main="Avarage Span of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#MeanIntensity in different attitudes.
+
+emf("A_meanIntensity_boxplot.emf", width=5.5, height=3)
+```{r}
+plot_intensity <- boxplot(meanIntensity~attitude+gender, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average Intensity (dB)",
+        main="Avarage Intensity of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#ArticulationRate in different attitudes.
+
+emf("A_articulationRate_boxplot.emf", width=5.5, height=3)
+```{r}
+plot_AR <- boxplot(articulationRate~attitude+gender, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average articulation rate (syl/s)",
+        main="Avarage articulation rate of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#H1_H2 in different attitudes.
+
+emf("A_H1-H2_boxplot.emf", width=5.5, height=3)
+```{r}
+plot_H1_H2 <- boxplot(H1_H2~attitude+gender, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average H1-H2 (dB)",
+        main="Avarage H1-H2 of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#F0 in different genders.
+
+emf("G_meanf0_boxplot.emf", width=5.5, height=3)
+```{r}
+G_plot_f0<- boxplot(meanf0~gender+attitude, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average F0 (Hz)",
+        main="Avarage F0 of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#F0Span in different genders.
+
+emf("G_f0Span_boxplot.emf", width=5.5, height=3)
+```{r}
+G_plot_span <- boxplot(f0Span~gender+attitude, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average Span (st)",
+        main="Avarage Span of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#MeanIntensity in different genders.
+
+emf("G_meanIntensity_boxplot.emf", width=5.5, height=3)
+```{r}
+G_plot_intensity <- boxplot(meanIntensity~gender+attitude, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average Intensity (dB)",
+        main="Avarage Intensity of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#ArticulationRate in different genders.
+
+
+```{r}
+G_plot_AR <- boxplot(articulationRate~gender+attitude, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average articulation rate (syl/s)",
+        main="Avarage articulation rate of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#H1_H2 in different genders.
+
+emf("G_H1-H2_boxplot.emf", width=5.5, height=3)
+```{r}
+G_plot_H <- boxplot(H1_H2~gender+attitude, RD,
+        col=c("coral1","deepskyblue"),
+        notch=T,names=c("Deferential","Neutral","Deferential","Neutral"),
+        xlab="Attitude", ylab="Average H1-H2 (dB)",
+        main="Avarage H1-H2 of Deferential and Neutral Mandarin Speech")
+```
+dev.off()
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#Inference statistics
+
+#Fit different data models with "lmer" function and assigning them to fit_ 1 and fit_ 2; Compare the two models by anova.
+```{r}
+fit_1 <- lmer(meanf0 ~ attitude * gender + 
+              (1 + attitude|speaker)+(1 + attitude|item), 
+              data = RD, REML = F)
+fit_2 <- lmer(meanf0 ~ attitude + gender + 
+              (1 + attitude|speaker)+(1 + attitude |item), 
+              data = RD, REML = F)
+anova(fit_1, fit_2)
+```
+#Fit different models again and assign them to fit_ 3 and fit_ 4; Compare the two new models with fit_ 1 and fit_ 2.
+```{r}
+fit_3 <- lmer(meanf0 ~ attitude + gender + 
+              (1 + 1|speaker)+(1 + attitude |item), 
+              data = RD, REML = F)
+fit_4 <- lmer(meanf0 ~ attitude + gender + 
+              (1 + attitude|speaker)+(1 + 1|item), 
+              data= RD, REML = F)
+anova(fit_2, fit_4)
+AIC(fit_1, fit_3)
+```
+#Finally, fit a model and assign it to fit_ 5 and compare fit_ 5 and fit_ 4.
+```{r}
+fit_5 <- lmer(meanf0 ~ gender + (1 + attitude|speaker)+
+                (1 + 1|item), data= RD, REML = F)
+anova(fit_4, fit_5)
+```
+#Through the above model comparison, it is found that fit_5 is the best. Therefore, assign it to fit.f0, and generate a summary of its fitting results through the "summary" function.
+```{r}
+fit.f0 <- fit_5
+summary(fit.f0)
+```
+#f0Span
+```{r}
+fit.span <- lmer(f0Span ~ gender + (1 + attitude|speaker)+
+                (1 + 1|item), data= RD, REML = F)
+summary(fit.span)
+```
+#meanIntensity
+```{r}
+fit.intensity <- lmer(meanIntensity ~ gender + 
+                        (1 + attitude|speaker)+
+                        (1 + 1|item), data= RD, REML = F)
+summary(fit.intensity)
+```
+#articulationRate
+```{r}
+fit.AR <- lmer(articulationRate ~ gender + (1 + attitude|speaker)+
+                 (1 + 1|item), data= RD, REML = F)
+summary(fit.AR)
+```
+#H1_H2
+```{r}
+fit.H1_H2 <- lmer(H1_H2 ~ gender + (1 + attitude|speaker)+
+                    (1 + 1|item), data= RD, REML = F)
+summary(fit.H1_H2)
+```
+
+#Visualization
+```{r}
+plot(allEffects(fit.f0))
+plot(allEffects(fit.span))
+plot(allEffects(fit.intensity))
+plot(allEffects(fit.AR))
+plot(allEffects(fit.H1_H2))
+```
+
+#Add a new variable num_attitude to RD through "mutate" function, convert Def and Non to 1 and 0, and assign the processed data to RD_ 1.
+```{r}
+RD_1 <- mutate(RD, num_attitude=ifelse(attitude=="Def",1,0))
+RD_1
+```
+
+
+#The "GLM" function is used to fit the data, and the model results after fitting are visualized to observe whether these speech data can effectively predict the specific speech. The prediction accuracy is calculated by "summarize" function.
+
+#fit.full
+```{r}
+fit.full <- glm(num_attitude ~ meanf0 + f0Span + meanIntensity + articulationRate + H1_H2,
+                family = binomial(), data = RD_1)
+summary(fit.full)
+plot(fit.full)
+```
+#fit.reduced
+```{r}
+fit.reduced <- glm(num_attitude ~ meanIntensity + articulationRate+ H1_H2,
+                   family = binomial(), data = RD_1)
+summary(fit.reduced)
+plot(fit.reduced)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
