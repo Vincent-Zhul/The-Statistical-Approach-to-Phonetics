@@ -1,5 +1,5 @@
 # The-Statistical-Approach-to-Phonetics
-### Code: In code folder, there are .R, .Rdata, .Rmd and .html files.
-### Data: In the raw_data folder, we can see some unprocessed data files.
-### Output: The processing data and result pictures.
-### Result: I report the results in a PDF file.
+### Code: In code folder, there are [.R](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/blob/main/code/The%20statistical%20approach%20to%20phonetics.R), [.Rdata](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/blob/main/code/The%20statistical%20approach%20to%20phonetics.Rdata), [.Rmd](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/blob/main/code/The%20statistical%20approach%20to%20phonetics.Rmd) and [.html](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/blob/main/code/The%20statistical%20approach%20to%20phonetics.html) files.
+### Data: In the [raw_data folder](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/tree/main/Raw_Data), we can see some unprocessed data files.
+### [Output](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/tree/main/Output): The processing data and result pictures.
+### Result: I report the results in a [PDF file](https://github.com/Vincent-Zhul/The-Statistical-Approach-to-Phonetics/blob/main/Result%20Presentation.pdf).
