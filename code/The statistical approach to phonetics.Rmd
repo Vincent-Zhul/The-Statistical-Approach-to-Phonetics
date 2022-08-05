@@ -26,7 +26,7 @@ library(splitstackshape)
 
 #Set file access path
 ```{r warning=FALSE}
-setwd("/Users/zhulei/Desktop/R学习/R大作业")
+setwd("/Users/zhulei/Desktop/R Research")
 ```
 #-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
